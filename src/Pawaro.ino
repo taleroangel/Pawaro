@@ -89,11 +89,11 @@ void loop()
     notifier.setStatus(color);
 
     // Sleeping
-    delay(10000);
+    delay(5000);
 
     Serial.println("Sending notification...");
-    notifier.sendNotification(0xFF0000, 5, NotificationManager::FAST_BLINK);
-
+    notifier.sendNotification(0xFF0000, 5000, NotificationManager::BLINK);
+    notifier.sendNotification(0xFF00FF, 5000, NotificationManager::FAST_BLINK);
     // Turn LED down
     Serial.println("Good night!");
     notifier.setStatus(_STATUS_OFF);

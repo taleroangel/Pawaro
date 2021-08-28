@@ -78,5 +78,63 @@ void NotificationManager::sendNotification(color_t status,
                                            time_t timer,
                                            effect_t effect)
 {
+    // Set new color
+    setColor(status);
+    bool is_on = false;
 
+    switch (effect)
+    {
+    case BLINK:
+        for (int i = 0; i < timer / (_BLINK_SEC / BLINK); i++)
+        {
+            is_on = is_on
+                        ? (setColor(_STATUS_OFF), false)
+                        : (setColor(status), true);
+            delay(_BLINK_SEC / BLINK);
+        }
+
+        break;
+
+    case FAST_BLINK:
+        for (int i = 0; i < timer / (_BLINK_SEC / FAST_BLINK); i++)
+        {
+            is_on = is_on
+                        ? (setColor(_STATUS_OFF), false)
+                        : (setColor(status), true);
+            delay(_BLINK_SEC / FAST_BLINK);
+        }
+        break;
+
+    default:
+        // ON or any other effect
+        delay(timer);
+        break;
+    }
+
+    //Return last value
+    setColor(this->status);
+
+    /*
+    time_t start = (time_t)millis(), elapsed = 0;
+
+    // Start the color
+    if (!setColor(status))
+        return;
+
+    while (elapsed < timer)
+    {
+        // Check elapsed time
+        elapsed = (time_t)millis() - start;
+
+        if (elapsed >= timer)
+            break;
+
+        ((elapsed % _BLINK_SEC) / (_BLINK_SEC % effect)) % 2 == 0
+            ? setColor(status)
+            : setColor(_STATUS_OFF);
+    }
+
+    // Return to the status
+    setColor(this->status);
+    */
 }

@@ -50,9 +50,9 @@ public:
 
     enum effect_t : uint8_t // LED effect (Status changes per second)
     {
-        ON = 1,        // Keep the LED on (Default)
-        BLINK = 3,     // Blink the LED
-        FAST_BLINK = 4 // Fast blink the LED
+        ON,             // Keep the LED on (Default)
+        BLINK = 2,      // Blink the LED
+        FAST_BLINK = 4  // Fast blink the LED
     };
 
     // Private attributes
