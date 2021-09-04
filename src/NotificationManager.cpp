@@ -35,6 +35,10 @@ NotificationManager::NotificationManager(pin_t R, pin_t G, pin_t B, bool anode)
 
 bool NotificationManager::setColor(color_t color)
 {
+#ifdef _NM_DISABLE
+    color = _STATUS_OFF;
+#endif
+
     if (color > 0xFFFFFF)
         return false;
 
@@ -85,7 +89,7 @@ void NotificationManager::sendNotification(color_t status,
     switch (effect)
     {
     case BLINK:
-        for (int i = 0; i < timer / (_BLINK_SEC / BLINK); i++)
+        for (time_t i = 0; i < timer / (_BLINK_SEC / BLINK); i++)
         {
             is_on = is_on
                         ? (setColor(_STATUS_OFF), false)
@@ -96,7 +100,7 @@ void NotificationManager::sendNotification(color_t status,
         break;
 
     case FAST_BLINK:
-        for (int i = 0; i < timer / (_BLINK_SEC / FAST_BLINK); i++)
+        for (time_t i = 0; i < timer / (_BLINK_SEC / FAST_BLINK); i++)
         {
             is_on = is_on
                         ? (setColor(_STATUS_OFF), false)
@@ -113,28 +117,4 @@ void NotificationManager::sendNotification(color_t status,
 
     //Return last value
     setColor(this->status);
-
-    /*
-    time_t start = (time_t)millis(), elapsed = 0;
-
-    // Start the color
-    if (!setColor(status))
-        return;
-
-    while (elapsed < timer)
-    {
-        // Check elapsed time
-        elapsed = (time_t)millis() - start;
-
-        if (elapsed >= timer)
-            break;
-
-        ((elapsed % _BLINK_SEC) / (_BLINK_SEC % effect)) % 2 == 0
-            ? setColor(status)
-            : setColor(_STATUS_OFF);
-    }
-
-    // Return to the status
-    setColor(this->status);
-    */
 }

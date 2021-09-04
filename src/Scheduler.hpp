@@ -1,9 +1,9 @@
 /**
- * @file Configuration.hpp
+ * @file Scheduler.hpp
  * @author Ángel David Talero Peñuela (angelgotalero@outlook.com)
- * @brief Configuration and Debug flags
+ * @brief Manage Clock and Schedule events
  * @version 1.0
- * @date 27-08-2021
+ * @date 04-09-2021
  * 
  * @copyright Copyright (c) 2021 Angel Talero. All rights reserved.
  * 
@@ -25,23 +25,22 @@
  * under the License. 
  */
 
-#ifndef _CONFIGURATION_HPP_
-#define _CONFIGURATION_HPP_
+#ifndef _SCHEDULER_HPP_
+#define _SCHEDULER_HPP_
 
-// Settings imported flag
-#define _PAWARO_CONFIG_LOADED
+#include <RTClib.h>
 
-/* ---------------------------- TIME VARIABLES ----------------------------- */
-#define _PAWARO_WAIT_RTC 3000 // Wait for the RTC module to be ready
+#include "Common.hpp"
 
-/* ---------------------------- DEBUG VARIABLES ---------------------------- */
-// Uncomment this line to enable Serial debugging
-#define _PAWARO_DEBUG
+class Scheduler
+{
+    // Constructor
+public:
+    /**
+     * @brief Construct a new Scheduler object
+     * @param clock_instance Initialized clock instance
+     */
+    Scheduler(RTC_DS1307 &clock_instance);
+};
 
-// Debug settings
-#ifdef _PAWARO_DEBUG
-#define _SERIAL_BAUD 9600
-#define _SERIAL_TIMEOUT 10000
-#endif
-
-#endif //_CONFIGURATION_HPP_
+#endif //_SCHEDULER_HPP_

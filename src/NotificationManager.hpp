@@ -28,6 +28,11 @@
 #ifndef _NOTIFICATIONMANAGER_HPP_
 #define _NOTIFICATIONMANAGER_HPP_
 
+// Configurations
+
+//#define _NM_DISABLE    //    Disable NotificationManager flag
+#define _DEFAULT_ND 1000 // Default notification delay
+
 // Macros
 #define _STATUS_OFF 0x000000  // OFF VALUE
 #define _STATUS_ON 0xFFFFFF   // ON VALUE
@@ -50,9 +55,9 @@ public:
 
     enum effect_t : uint8_t // LED effect (Status changes per second)
     {
-        ON,             // Keep the LED on (Default)
-        BLINK = 2,      // Blink the LED
-        FAST_BLINK = 4  // Fast blink the LED
+        ON,            // Keep the LED on (Default)
+        BLINK = 2,     // Blink the LED
+        FAST_BLINK = 4 // Fast blink the LED
     };
 
     // Private attributes
@@ -128,7 +133,7 @@ public:
      * @param type Animation (No animation [ON] by default)
      */
     void sendNotification(color_t status,
-                          time_t time = 2000,
+                          time_t time = _DEFAULT_ND,
                           effect_t effect = ON);
 };
 

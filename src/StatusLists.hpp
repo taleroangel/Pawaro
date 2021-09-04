@@ -1,9 +1,9 @@
 /**
- * @file Configuration.hpp
+ * @file StatusLists.hpp
  * @author Ángel David Talero Peñuela (angelgotalero@outlook.com)
- * @brief Configuration and Debug flags
+ * @brief Status lists for NotificationManager
  * @version 1.0
- * @date 27-08-2021
+ * @date 28-08-2021
  * 
  * @copyright Copyright (c) 2021 Angel Talero. All rights reserved.
  * 
@@ -25,23 +25,32 @@
  * under the License. 
  */
 
-#ifndef _CONFIGURATION_HPP_
-#define _CONFIGURATION_HPP_
+#ifndef _STATUSLISTS_HPP_
+#define _STATUSLISTS_HPP_
 
-// Settings imported flag
-#define _PAWARO_CONFIG_LOADED
+#include "NotificationManager.hpp"
 
-/* ---------------------------- TIME VARIABLES ----------------------------- */
-#define _PAWARO_WAIT_RTC 3000 // Wait for the RTC module to be ready
+namespace STATUS
+{
+    constexpr time_t SHORT = _DEFAULT_ND;     // Short pulse duration
+    constexpr time_t LARGE = _DEFAULT_ND * 2; // Default pulse duration
+    constexpr time_t ALERT = _DEFAULT_ND * 3; // Long pulse duration
 
-/* ---------------------------- DEBUG VARIABLES ---------------------------- */
-// Uncomment this line to enable Serial debugging
-#define _PAWARO_DEBUG
+    // Colors
+    enum : NotificationManager::color_t
+    {
+        // Generic
+        FAILURE = 0xFF0000, // Red
+        SUCCESS = 0x00FF00, // Green
 
-// Debug settings
-#ifdef _PAWARO_DEBUG
-#define _SERIAL_BAUD 9600
-#define _SERIAL_TIMEOUT 10000
-#endif
+        // Serial (Purple reserved)
+        DEBUG_MODE = 0xCD00FF, // Purple
+        SERIAL_FAILURE = 0xCD00FF,
 
-#endif //_CONFIGURATION_HPP_
+        // Clock
+        BEGIN_RTC = 0x0000FF,   // Blue
+        CLOCK_SETUP = 0xffdc00, // Yellow
+    };
+}
+
+#endif //_STATUSLISTS_HPP_

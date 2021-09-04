@@ -5,9 +5,9 @@
  * @brief Pet automatic Feeder using Arduino (Circuit described above)
  * @version 1.0
  * @date 27-08-2021
- * 
+ *
  * @copyright Copyright (c) 2021 Angel Talero. All rights reserved.
- * 
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,9 +15,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -43,59 +43,107 @@
 
 /* ------------------------------- Libraries ------------------------------- */
 #include <Arduino.h>
+#include <RTClib.h>
 
-#include "Configuration.hpp"
-#include "NotificationManager.hpp"
+#include "Common.hpp"              // Common definitions between modules
+#include "Configuration.hpp"       // Has to go first (Macros for configurations)
+#include "NotificationManager.hpp" // LED Notifications
+#include "StatusLists.hpp"         // Notifications color list
+
+/* --------------------------------- Pines --------------------------------- */
+#define RGB_R 3
+#define RGB_G 5
+#define RGB_B 6
+#define RGB_ANODE true
 
 /* ---------------------------- Global variables --------------------------- */
-NotificationManager notifier(3, 5, 6, true);
+// Notification module
+NotificationManager notifier(RGB_R, RGB_G, RGB_B, RGB_ANODE);
+RTC_DS1307 clock;
 
 /* --------------------------------- Setup --------------------------------- */
 void setup()
 {
-// Enable Serial for debugging
 #ifdef _PAWARO_DEBUG
+
+    //! Serial Initialization
+
     Serial.begin(_SERIAL_BAUD);
 
     // Wait for Serial to open
     while (!Serial)
         if (millis() > _SERIAL_TIMEOUT)
         {
-            //Send notification FAILURE
+            // Serial timedout
+            notifier.sendNotification(
+                STATUS::SERIAL_FAILURE,
+                STATUS::ALERT,
+                NotificationManager::FAST_BLINK);
             break;
         }
 
     if (Serial)
     {
-        // Send status DEBUG
-        Serial.println("DEBUG: Serial connection successfull");
+        // Serial successfully opened
+        notifier.sendNotification(
+            STATUS::DEBUG_MODE,
+            STATUS::SHORT,
+            NotificationManager::FAST_BLINK);
+        notifier.setStatus(STATUS::DEBUG_MODE);
+        Serial.println("DEBUG: Serial connection successful");
+    }
+#endif
+
+    //! Clock Initialization
+
+    // RTC Module initialization and wait for RTC
+    notifier.sendNotification(STATUS::BEGIN_RTC, (time_t)_PAWARO_WAIT_RTC,
+                              NotificationManager::FAST_BLINK);
+
+    if (!clock.begin()) // Clock was not connected
+    {
+        notifier.setStatus(STATUS::FAILURE);
+#ifdef _PAWARO_DEBUG
+        Serial.println("Clock: RTC module not found (DS1307)");
+#endif
+        while (true) // STOP EXECUTION (Can't continue without Clock)
+            ;
     }
 
+    //! Clock adjust
+
+    if (!clock.isrunning()) // Clock is outdated
+    {
+#ifdef _PAWARO_DEBUG
+        Serial.println("Clock: Clock is not up to date!");
+        Serial.println("Clock: Setting up System time and date");
 #endif
+        // Clock adjust up to date
+        clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+        // Send clock adjust notification
+        notifier.sendNotification(STATUS::CLOCK_SETUP, STATUS::LARGE,
+                                  NotificationManager::FAST_BLINK);
+
+        // LED will be Yellow alerting the user that the clock might have wrong
+        // values, proper Clock update must be done with a computer. (This alert
+        // will only be shown once)
+        notifier.setStatus(STATUS::CLOCK_SETUP);
+
+#ifdef _PAWARO_DEBUG
+        Serial.println("Clock: Clock updated!");
+#endif
+    }
+    else // Clock is successfully working
+    {
+#ifdef _PAWARO_DEBUG
+        Serial.println("Clock: Clock is up to date and running");
+#endif
+
+        // * All basic Initialization successfully completed
+        notifier.sendNotification(STATUS::SUCCESS);
+    }
 }
 
 /* --------------------------------- Loop --------------------------------- */
-void loop()
-{
-    // Select random color
-    NotificationManager::color_t color = (NotificationManager::color_t)random(0, 0xFFFFFF);
-    Serial.print("Current value must be: ");
-    Serial.print(color, HEX);
-    Serial.println("");
-
-    // Show color
-    Serial.print("Printing value!");
-    Serial.println(millis(), DEC);
-    notifier.setStatus(color);
-
-    // Sleeping
-    delay(5000);
-
-    Serial.println("Sending notification...");
-    notifier.sendNotification(0xFF0000, 5000, NotificationManager::BLINK);
-    notifier.sendNotification(0xFF00FF, 5000, NotificationManager::FAST_BLINK);
-    // Turn LED down
-    Serial.println("Good night!");
-    notifier.setStatus(_STATUS_OFF);
-    delay(10000);
-}
+void loop() {}
