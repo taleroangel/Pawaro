@@ -30,8 +30,8 @@
 
 // Configurations
 
-//#define _NM_DISABLE    //    Disable NotificationManager flag
-#define _DEFAULT_ND 1000 // Default notification delay
+//#define _NM_DISABLE       // Disable NotificationManager flag
+#define _DEFAULT_ND 1000     // Default notification delay
 
 // Macros
 #define _STATUS_OFF 0x000000  // OFF VALUE
@@ -46,19 +46,27 @@
 
 #include "Common.hpp"
 
+/**
+ * @enum EFFECT
+ * @brief Effects for Notifications (Not customizable).
+ */
+enum class EFFECT : uint8_t
+{
+    ON,            // Keep the LED on (Default)
+    BLINK = 2,     // Blink the LED
+    FAST_BLINK = 4 // Fast blink the LED
+};
+
+/**
+ * @class NotificationManager
+ * @brief Send notifications to the user by a LED color scheme.
+ */
 class NotificationManager
 {
 
     // Public typedefs
 public:
     using color_t = uint32_t; // HEX Color value (0x000000 - 0xFFFFFF)
-
-    enum effect_t : uint8_t // LED effect (Status changes per second)
-    {
-        ON,            // Keep the LED on (Default)
-        BLINK = 2,     // Blink the LED
-        FAST_BLINK = 4 // Fast blink the LED
-    };
 
     // Private attributes
 private:
@@ -126,7 +134,7 @@ public:
     color_t stopStatus();
 
     /**
-     * @brief 
+     * @brief Send an LED Notification, time and animation are optional
      * 
      * @param status Color to be sent
      * @param time Time in ms to show the notification (2000 by default)
@@ -134,7 +142,22 @@ public:
      */
     void sendNotification(color_t status,
                           time_t time = _DEFAULT_ND,
-                          effect_t effect = ON);
+                          EFFECT effect = EFFECT::ON);
+
+    /**
+     * @brief Send an LED Notification with a 1s delay
+     * 
+     * @param status Color to be sent
+     * @param type Animation to use
+     */
+    void sendNotification(color_t status, EFFECT effect);
+
+    /**
+     * @brief Send a notification safe to use with interrupts
+     * 
+     * @param status Color to be sent
+     */
+    void interruptNotifier(color_t status, time_t time = _DEFAULT_ND);
 };
 
 #endif //_NOTIFICATIONMANAGER_HPP_

@@ -26,49 +26,90 @@
  * under the License.
  */
 
-/* Circuit ->
-* Using an Arduino Pro Mini (ATmega328P, 5V 16MHz)
-| Arduino 	| Module                       	|
-|---------	|------------------------------	|
-| VCC0    	| Source 5V                    	|
-| VCC1    	| Servo(VCC), RTC(VCC), Button 	|
-| GND     	| Ground                       	|
-| 2       	| 10K resistor to ground       	|
-| 3~      	| RGB Red                      	|
-| 5~      	| RGB Green                    	|
-| 6~      	| RGB Blue                     	|
-| 9~      	| Servo(SIG)                   	|
-| RST     	| Button to ground             	|
-*/
-
 /* ------------------------------- Libraries ------------------------------- */
-#include <Arduino.h>
-#include <RTClib.h>
 
-#include "Common.hpp"              // Common definitions between modules
-#include "Configuration.hpp"       // Has to go first (Macros for configurations)
+// Essential
+#include <Arduino.h>
+#include "Common.hpp" // Common definitions between modules
+
+// NotificationManager
 #include "NotificationManager.hpp" // LED Notifications
 #include "StatusLists.hpp"         // Notifications color list
 
+// Scheduler
+#include "Scheduler.hpp" // Event handler and Clock
+#include "Schedule.h"    // Events
+
 /* --------------------------------- Pines --------------------------------- */
-#define RGB_R 3
-#define RGB_G 5
-#define RGB_B 6
+// All pins
+#define LOWEST 2
+#define HIGHEST 13
+
+// NotificationManager
+#define RGB_R 5
+#define RGB_G 6
+#define RGB_B 9
 #define RGB_ANODE true
 
+// Feeder
+#define FEEDER_BUTTON 2
+#define _DEBOUNCING 200
+
+/* ---------------------------- DEBUG VARIABLES ---------------------------- */
+// Uncomment this line to enable Serial debugging
+#define _PAWARO_DEBUG
+
+// Debug settings
+#ifdef _PAWARO_DEBUG
+#define _SERIAL_BAUD 9600
+#define _SERIAL_TIMEOUT 10000
+#endif
+
 /* ---------------------------- Global variables --------------------------- */
-// Notification module
+// Modules
 NotificationManager notifier(RGB_R, RGB_G, RGB_B, RGB_ANODE);
-RTC_DS1307 clock;
+Scheduler scheduler;
+
+/* ----------------------------- Declarations ----------------------------- */
+/**
+ * @brief Event to be triggered by an Scheduler alarm
+ * Put here the function to be triggered
+ * SHOULD BE INTERRUPT FRIENDLY
+ * @param alert_number Parameter passed by the Scheduler Alarm
+ */
+void EventInterface(int alert_number);
+
+/**
+ * @brief Enter in a HALT state
+ * Stop all execution of the program
+ */
+void EnterHalt();
+
+/**
+ * @brief Hardware interrupt ISR
+ * (PIN 2 is attached to this interrupt)
+ * By default, the EventInterface will be called with the 'alert_number'
+ * parameter set to 1
+ */
+void HardwareISR();
 
 /* --------------------------------- Setup --------------------------------- */
 void setup()
 {
+    // * Pin initialization
+    pinMode(FEEDER_BUTTON, INPUT);
+
+    // * Serial Initialization
+
 #ifdef _PAWARO_DEBUG
 
-    //! Serial Initialization
-
+    // Begin Serial communication
     Serial.begin(_SERIAL_BAUD);
+
+    // Show a debug alert
+    Serial.println(
+        "ALERT: DEBUG mode is enabled!, \
+don't leave it enabled for the final product!");
 
     // Wait for Serial to open
     while (!Serial)
@@ -76,74 +117,166 @@ void setup()
         {
             // Serial timedout
             notifier.sendNotification(
-                STATUS::SERIAL_FAILURE,
-                STATUS::ALERT,
-                NotificationManager::FAST_BLINK);
+                STATUS::DEBUG,
+                LENGTH::LONG_ALERT,
+                EFFECT::FAST_BLINK);
+
+            // Notify Serial does not work
+            notifier.setStatus(STATUS::INVALID_CONF);
             break;
         }
 
     if (Serial)
     {
         // Serial successfully opened
-        notifier.sendNotification(
-            STATUS::DEBUG_MODE,
-            STATUS::SHORT,
-            NotificationManager::FAST_BLINK);
-        notifier.setStatus(STATUS::DEBUG_MODE);
-        Serial.println("DEBUG: Serial connection successful");
+        notifier.setStatus(STATUS::DEBUG);
+        Serial.println("System: Serial connection successful");
     }
+
 #endif
 
-    //! Clock Initialization
+    // * Clock initialization
 
-    // RTC Module initialization and wait for RTC
-    notifier.sendNotification(STATUS::BEGIN_RTC, (time_t)_PAWARO_WAIT_RTC,
-                              NotificationManager::FAST_BLINK);
+    // Clock initialization alert and delay
+    notifier.sendNotification(
+        STATUS::CLOCK,
+        (time_t)_RTC_WAIT,
+        EFFECT::BLINK);
 
-    if (!clock.begin()) // Clock was not connected
+    switch (scheduler.begin())
     {
-        notifier.setStatus(STATUS::FAILURE);
+    case Scheduler::RTC_NOT_FOUND: // RTC module is missing
 #ifdef _PAWARO_DEBUG
         Serial.println("Clock: RTC module not found (DS1307)");
 #endif
-        while (true) // STOP EXECUTION (Can't continue without Clock)
-            ;
-    }
+        // CANNOT CONTINUE WITHOUT CLOCK
+        EnterHalt(); // ! HALT STATE
+        break;
 
-    //! Clock adjust
-
-    if (!clock.isrunning()) // Clock is outdated
-    {
+    case Scheduler::CLK_OUTDATED:
+        // LED will be Yellow alerting the user that the clock might have wrong
+        // values, proper Clock update must be done with a computer. (This alert
+        // will only be shown once)
+        notifier.setStatus(STATUS::INVALID_CONF);
 #ifdef _PAWARO_DEBUG
         Serial.println("Clock: Clock is not up to date!");
         Serial.println("Clock: Setting up System time and date");
 #endif
-        // Clock adjust up to date
-        clock.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        break;
 
-        // Send clock adjust notification
-        notifier.sendNotification(STATUS::CLOCK_SETUP, STATUS::LARGE,
-                                  NotificationManager::FAST_BLINK);
-
-        // LED will be Yellow alerting the user that the clock might have wrong
-        // values, proper Clock update must be done with a computer. (This alert
-        // will only be shown once)
-        notifier.setStatus(STATUS::CLOCK_SETUP);
-
+    case Scheduler::SUCCESS:
 #ifdef _PAWARO_DEBUG
-        Serial.println("Clock: Clock updated!");
+        Serial.println("Clock: Clock was successfully enabled");
 #endif
+        break;
     }
-    else // Clock is successfully working
+
+    // * Read Schedule Values
+
+    if (!scheduler.importHours(elements, schedule))
     {
+        // Wait a little bit before halting
+        notifier.sendNotification(
+            STATUS::SCHEDULER,
+            LENGTH::ALERT,
+            EFFECT::FAST_BLINK);
+
+        notifier.sendNotification(
+            STATUS::INVALID_CONF,
+            LENGTH::LONG_ALERT);
+
 #ifdef _PAWARO_DEBUG
-        Serial.println("Clock: Clock is up to date and running");
+        Serial.println("Sheduler: Schedule file is invalid!");
+#endif
+        EnterHalt(); // ! HALT STATE
+    }
+
+#ifdef _PAWARO_DEBUG
+    else
+    {
+        Serial.println("Sheduler: Schedule file was read successfully");
+        // Show current Clock time
+        Serial.print("Clock: Current time is ");
+        Serial.println(scheduler.grabValue());
+    }
 #endif
 
-        // * All basic Initialization successfully completed
-        notifier.sendNotification(STATUS::SUCCESS);
-    }
+    // * Finish initialization
+
+    // Notify about success
+    notifier.sendNotification(STATUS::SUCCESS, LENGTH::SHORT, EFFECT::BLINK);
+#ifndef _PAWARO_DEBUG
+    notifier.stopStatus(); // Stop any previous status
+#endif
+
+    // * Enable interrupts (Leave last)
+    attachInterrupt(
+        digitalPinToInterrupt(FEEDER_BUTTON),
+        HardwareISR,
+        RISING);
 }
 
 /* --------------------------------- Loop --------------------------------- */
-void loop() {}
+void loop()
+{
+    // Listen for an event to happen,
+    // when the listener frees the system EventInterface picks the return value
+    EventInterface(scheduler.listen());
+}
+
+/* ------------------------------ Definitions ------------------------------ */
+void EventInterface(int alert_number)
+{
+    if (alert_number < 0)
+        alert_number = 1;
+
+    // Send an event notification
+    notifier.sendNotification(STATUS::BUSY, EFFECT::FAST_BLINK);
+
+#ifdef _PAWARO_DEBUG
+    Serial.println("Scheduler: An event is being triggered by an Alarm!");
+    Serial.print("Clock: Alert was triggered at ");
+    Serial.println(scheduler.grabValue());
+#endif
+    // Put here the function to be triggered by the event
+    //! ... event ... !//
+}
+
+void EnterHalt()
+{
+    // Send a HALT notification
+    notifier.sendNotification(STATUS::HALT, LENGTH::ALERT, EFFECT::FAST_BLINK);
+    notifier.setStatus(STATUS::HALT);
+
+#ifdef _PAWARO_DEBUG
+    Serial.println(
+        "System: System experienced an unrecoverable error state (HALT)");
+#endif
+
+    // Disable all interrupts
+    noInterrupts();
+
+    // Destroy dynamic objects
+    scheduler.~Scheduler();
+
+    // Halt the system
+    while (true)
+        ;
+}
+
+void HardwareISR()
+{
+    static time_t lastInterrupt = 0;
+    time_t interrupt_time = millis();
+
+    // Error checking
+    if (lastInterrupt > interrupt_time)
+        lastInterrupt = interrupt_time;
+
+    if (interrupt_time - lastInterrupt > _DEBOUNCING)
+    {
+        scheduler.stopListen(); // Disable the main loop
+    }
+
+    lastInterrupt = interrupt_time;
+}

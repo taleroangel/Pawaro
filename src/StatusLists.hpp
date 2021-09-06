@@ -1,7 +1,7 @@
 /**
  * @file StatusLists.hpp
  * @author Ángel David Talero Peñuela (angelgotalero@outlook.com)
- * @brief Status lists for NotificationManager
+ * @brief Custom status lists for NotificationManager
  * @version 1.0
  * @date 28-08-2021
  * 
@@ -32,25 +32,31 @@
 
 namespace STATUS
 {
-    constexpr time_t SHORT = _DEFAULT_ND;     // Short pulse duration
-    constexpr time_t LARGE = _DEFAULT_ND * 2; // Default pulse duration
-    constexpr time_t ALERT = _DEFAULT_ND * 3; // Long pulse duration
-
     // Colors
     enum : NotificationManager::color_t
     {
         // Generic
-        FAILURE = 0xFF0000, // Red
-        SUCCESS = 0x00FF00, // Green
+        SUCCESS = 0x00FF00,      // Green
+        HALT = 0xFF0000,         // Red
+        BUSY = 0xFFFFFF,         // White
+        INVALID_CONF = 0xffff00, // Yellow
 
-        // Serial (Purple reserved)
-        DEBUG_MODE = 0xCD00FF, // Purple
-        SERIAL_FAILURE = 0xCD00FF,
+        // Yellow usually indicates you need to connect the system
+        // to a computer and re-upload the sketch
 
-        // Clock
-        BEGIN_RTC = 0x0000FF,   // Blue
-        CLOCK_SETUP = 0xffdc00, // Yellow
+        // Modules
+        DEBUG = 0x7400ff,     // DEBUG and Serial (Purple)
+        CLOCK = 0x0083ff,     // Clock (Cyan)
+        SCHEDULER = 0x00ffee, // Scheduler (Blue)
     };
+}
+
+namespace LENGTH
+{
+    constexpr time_t SHORT = _DEFAULT_ND;           // Short pulse duration
+    constexpr time_t LARGE = _DEFAULT_ND * 2;       // Default pulse duration
+    constexpr time_t ALERT = _DEFAULT_ND * 5;       // Long pulse duration
+    constexpr time_t LONG_ALERT = _DEFAULT_ND * 10; // Long pulse duration
 }
 
 #endif //_STATUSLISTS_HPP_

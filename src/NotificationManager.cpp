@@ -80,7 +80,7 @@ NotificationManager::color_t NotificationManager::stopStatus()
 
 void NotificationManager::sendNotification(color_t status,
                                            time_t timer,
-                                           effect_t effect)
+                                           EFFECT effect)
 {
     // Set new color
     setColor(status);
@@ -88,24 +88,26 @@ void NotificationManager::sendNotification(color_t status,
 
     switch (effect)
     {
-    case BLINK:
-        for (time_t i = 0; i < timer / (_BLINK_SEC / BLINK); i++)
+    case EFFECT::BLINK:
+        for (time_t i = 0;
+             i < timer / (_BLINK_SEC / (uint8_t)EFFECT::BLINK); i++)
         {
             is_on = is_on
                         ? (setColor(_STATUS_OFF), false)
                         : (setColor(status), true);
-            delay(_BLINK_SEC / BLINK);
+            delay(_BLINK_SEC / (uint8_t)EFFECT::BLINK);
         }
 
         break;
 
-    case FAST_BLINK:
-        for (time_t i = 0; i < timer / (_BLINK_SEC / FAST_BLINK); i++)
+    case EFFECT::FAST_BLINK:
+        for (time_t i = 0;
+             i < timer / (_BLINK_SEC / (uint8_t)EFFECT::FAST_BLINK); i++)
         {
             is_on = is_on
                         ? (setColor(_STATUS_OFF), false)
                         : (setColor(status), true);
-            delay(_BLINK_SEC / FAST_BLINK);
+            delay(_BLINK_SEC / (uint8_t)EFFECT::FAST_BLINK);
         }
         break;
 
@@ -113,6 +115,43 @@ void NotificationManager::sendNotification(color_t status,
         // ON or any other effect
         delay(timer);
         break;
+    }
+
+    //Return last value
+    setColor(this->status);
+}
+
+void NotificationManager::sendNotification(color_t status, EFFECT effect)
+{
+    NotificationManager::sendNotification(status, _DEFAULT_ND, effect);
+}
+
+void NotificationManager::interruptNotifier(color_t status, time_t time)
+{
+    // Set new color
+    setColor(status);
+
+    // Get value in seconds
+    time /= _DEFAULT_ND;
+
+    for (time_t i = 0; i < time; i++)
+    {
+        // Time up (1s)
+        for (int j = 0; j < _BLINK_SEC; j++)
+        {
+            setColor(status);
+            delayMicroseconds(_BLINK_SEC);
+        }
+
+        if (i == (time - 1))
+            break; //No need to wait 1s in off state last cycle
+
+        // Time down (1s)
+        for (int k = 0; k < _BLINK_SEC; k++)
+        {
+            setColor(_STATUS_OFF);
+            delayMicroseconds(_BLINK_SEC);
+        }
     }
 
     //Return last value
