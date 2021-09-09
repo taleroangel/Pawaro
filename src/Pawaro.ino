@@ -40,6 +40,9 @@
 #include "Scheduler.hpp" // Event handler and Clock
 #include "Schedule.h"    // Events
 
+// Servo
+#include "Feeder.hpp" // Feeder feeder
+
 /* --------------------------------- Pines --------------------------------- */
 // All pins
 #define LOWEST 2
@@ -54,10 +57,11 @@
 // Feeder
 #define FEEDER_BUTTON 2
 #define _DEBOUNCING 200
+#define SERVO 10
 
 /* ---------------------------- DEBUG VARIABLES ---------------------------- */
 // Uncomment this line to enable Serial debugging
-#define _PAWARO_DEBUG
+// #define _PAWARO_DEBUG
 
 // Debug settings
 #ifdef _PAWARO_DEBUG
@@ -69,15 +73,9 @@
 // Modules
 NotificationManager notifier(RGB_R, RGB_G, RGB_B, RGB_ANODE);
 Scheduler scheduler;
+Feeder feeder(SERVO);
 
 /* ----------------------------- Declarations ----------------------------- */
-/**
- * @brief Event to be triggered by an Scheduler alarm
- * Put here the function to be triggered
- * SHOULD BE INTERRUPT FRIENDLY
- * @param alert_number Parameter passed by the Scheduler Alarm
- */
-void EventInterface(int alert_number);
 
 /**
  * @brief Enter in a HALT state
@@ -99,17 +97,16 @@ void setup()
     // * Pin initialization
     pinMode(FEEDER_BUTTON, INPUT);
 
+    // * Class initializations
+    notifier.begin();
+    feeder.begin();
+
     // * Serial Initialization
 
 #ifdef _PAWARO_DEBUG
 
     // Begin Serial communication
     Serial.begin(_SERIAL_BAUD);
-
-    // Show a debug alert
-    Serial.println(
-        "ALERT: DEBUG mode is enabled!, \
-don't leave it enabled for the final product!");
 
     // Wait for Serial to open
     while (!Serial)
@@ -132,6 +129,11 @@ don't leave it enabled for the final product!");
         notifier.setStatus(STATUS::DEBUG);
         Serial.println("System: Serial connection successful");
     }
+
+    // Show a debug alert
+    Serial.println(
+        "ALERT: DEBUG mode is enabled!, \
+don't leave it enabled for the final product!");
 
 #endif
 
@@ -220,14 +222,11 @@ don't leave it enabled for the final product!");
 void loop()
 {
     // Listen for an event to happen,
-    // when the listener frees the system EventInterface picks the return value
-    EventInterface(scheduler.listen());
-}
+    // when the listener frees the system, EventInterface picks the return value
+    int alert_number = scheduler.listen();
 
-/* ------------------------------ Definitions ------------------------------ */
-void EventInterface(int alert_number)
-{
-    if (alert_number < 0)
+    // Stop from being less than 0
+    if (alert_number <= 0)
         alert_number = 1;
 
     // Send an event notification
@@ -239,7 +238,7 @@ void EventInterface(int alert_number)
     Serial.println(scheduler.grabValue());
 #endif
     // Put here the function to be triggered by the event
-    //! ... event ... !//
+    feeder.timer(time * (time_t)servings[alert_number]);
 }
 
 void EnterHalt()
@@ -258,6 +257,7 @@ void EnterHalt()
 
     // Destroy dynamic objects
     scheduler.~Scheduler();
+    feeder.~Feeder();
 
     // Halt the system
     while (true)
@@ -274,9 +274,7 @@ void HardwareISR()
         lastInterrupt = interrupt_time;
 
     if (interrupt_time - lastInterrupt > _DEBOUNCING)
-    {
         scheduler.stopListen(); // Disable the main loop
-    }
 
     lastInterrupt = interrupt_time;
 }

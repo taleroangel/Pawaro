@@ -31,7 +31,7 @@
 // Configurations
 
 //#define _NM_DISABLE       // Disable NotificationManager flag
-#define _DEFAULT_ND 1000     // Default notification delay
+#define _DEFAULT_ND 1000 // Default notification delay
 
 // Macros
 #define _STATUS_OFF 0x000000  // OFF VALUE
@@ -109,6 +109,12 @@ private:
 
     // Public member functions
 public:
+    /**
+     * @brief Start notification manager
+     * 
+     */
+    void begin();
+
     /**
      * @brief Set the Status of the LED
      * Set LED color indefinitely

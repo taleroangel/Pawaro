@@ -45,6 +45,8 @@ boolean Scheduler::importHours(int elements, String hours[])
 
 int Scheduler::listen()
 {
+    static int last_event = -1;
+
     this->isListening = true;
 
     while (this->isListening)
@@ -56,16 +58,18 @@ int Scheduler::listen()
 
         for (int i = 0; i < n_events; i++)
         {
+            // Can't be last event
+            if (i == last_event)
+                continue;
+
             // Hours are equal
             if (
                 current.hour() == events[i].hour() &&
                 current.minute() == events[i].minute())
             {
                 // Call the event
-                return n_events;
-
-                // Delay for the rest of the Minute
-                delay(_MINUTE);
+                last_event = i;
+                return i;
             }
         }
     }

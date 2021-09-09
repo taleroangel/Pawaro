@@ -11,10 +11,16 @@ NotificationManager::NotificationManager(pin_t R, pin_t G, pin_t B, bool anode)
     // Set common anode/cathode
     this->led.anode = anode;
 
+    // Start status at 0
+    this->status = _STATUS_OFF;
+}
+
+void NotificationManager::begin()
+{
     // Handle pin modes
-    pinMode(R, OUTPUT);
-    pinMode(G, OUTPUT);
-    pinMode(B, OUTPUT);
+    pinMode(led.R, OUTPUT);
+    pinMode(led.G, OUTPUT);
+    pinMode(led.B, OUTPUT);
 
     // Start everything in 0
     analogWrite(this->led.R, this->led.anode
@@ -28,9 +34,6 @@ NotificationManager::NotificationManager(pin_t R, pin_t G, pin_t B, bool anode)
     analogWrite(this->led.B, this->led.anode
                                  ? ((~_STATUS_OFF & _STATUS_ON) & _RGB_BLE) / _RGB_DIV_BLE
                                  : (_STATUS_OFF & _RGB_BLE) / _RGB_DIV_BLE);
-
-    // Start status at 0
-    this->status = _STATUS_OFF;
 }
 
 bool NotificationManager::setColor(color_t color)

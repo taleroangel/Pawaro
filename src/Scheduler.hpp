@@ -65,8 +65,8 @@ private:
     RTC_DS1307 clock; // Clock module
     DateTime *events; // Hours to trigger events
     int n_events = 0;
-    boolean memory_allocated = false; // Memory was allocated flag
-    boolean isListening = false;      // Currently listening
+    boolean memory_allocated = false;     // Memory was allocated flag
+    volatile boolean isListening = false; // Currently listening
 
     // Public member functions
 public:
@@ -104,7 +104,7 @@ public:
      * @param format Format to grab the value (Default: "DD/MM/YYYY - hh:mm:ss")
      * @return String with the value inside the clock
      */
-    String grabValue(String format = "DD/MM/YYYY - hh:mm:ss");
+    String grabValue(String format = "DD/MM/YYYY-hh:mm:ss");
 
     /**
      * @brief Update the clock

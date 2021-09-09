@@ -1,9 +1,9 @@
 /**
- * @file Common.hpp
+ * @file Feeder.hpp
  * @author Ángel David Talero Peñuela (angelgotalero@outlook.com)
- * @brief Common variables and functions between modules
+ * @brief Feeder(s) servomotor management
  * @version 1.0
- * @date 27-08-2021
+ * @date 08-09-2021
  * 
  * @copyright Copyright (c) 2021 Angel Talero. All rights reserved.
  * 
@@ -25,19 +25,48 @@
  * under the License. 
  */
 
-#ifndef _COMMON_HPP_
-#define _COMMON_HPP_
+#ifndef _FEEDER_HPP_
+#define _FEEDER_HPP_
 
-/* -------------------------------- Headers -------------------------------- */
-#include <stdint.h>
-#include <Arduino.h>
+#define MAX_ANGLE 180
+#define MIN_ANGLE 0
 
-/* ------------------------------- Typedefs -------------------------------- */
+#include <Servo.h>
+#include "Common.hpp"
 
-// Pins data type
-using pin_t = uint8_t;
+/**
+ * @class Feeder
+ * @brief Feeder's servomotor manipulation abstraction layer
+ */
+class Feeder
+{
+    // Public Typedefs
+public:
+    using degree_t = uint8_t;
+    enum STATUS : uint8_t
+    {
+        OPENED,
+        CLOSED,
+        TIMED,
+        DISABLED
+    };
 
-// Time data types
-using time_t = uint32_t;
+    // Private attributes
+private:
+    Servo servoClass;
+    pin_t servo_pin;
+    degree_t aperture;
+    STATUS status;
 
-#endif //_COMMON_HPP_
+    // Public member function
+public:
+    Feeder(pin_t servo_pin, degree_t aperture = MAX_ANGLE);
+    ~Feeder();
+    void begin();
+    STATUS getStatus() const;
+    void open();
+    void close();
+    void timer(time_t timeout);
+};
+
+#endif //_FEEDER_HPP_
